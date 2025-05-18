@@ -1,126 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>AR Classroom Enhanced</title>
-    <!-- A-Frame core -->
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <!-- A-Frame Extras for animation-mixer -->
-    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
-    <!-- AR.js -->
-    <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.0/aframe/build/aframe-ar.js"></script>
 
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-      }
-      canvas {
-        touch-action: none;
-      }
-    </style>
+<head>
+  <meta charset="UTF-8" />
+  <title>AR Classroom Enhanced</title>
+  <!-- A-Frame core -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <!-- A-Frame Extras for animation-mixer -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  <!-- AR.js -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.0/aframe/build/aframe-ar.js"></script>
 
-    <script>
-      // 1) Full 3D drag‐rotate
-      AFRAME.registerComponent("drag-rotate-3d", {
-        init: function () {
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    canvas {
+      touch-action: none;
+    }
+  </style>
+
+  <script>
+    // 1) Full 3D drag‐rotate
+    AFRAME.registerComponent("drag-rotate-3d", {
+      init: function () {
+        this.dragging = false;
+        this.prev = { x: 0, y: 0 };
+        const canvas = this.el.sceneEl.canvas;
+
+        const onDown = (e) => {
+          this.dragging = true;
+          this.prev = { x: e.clientX, y: e.clientY };
+        };
+        const onUp = () => {
           this.dragging = false;
-          this.prev = { x: 0, y: 0 };
-          const canvas = this.el.sceneEl.canvas;
-
-          const onDown = (e) => {
-            this.dragging = true;
-            this.prev = { x: e.clientX, y: e.clientY };
-          };
-          const onUp = () => {
-            this.dragging = false;
-          };
-          const onMove = (e) => {
-            if (!this.dragging) return;
-            const dx = (e.clientX - this.prev.x) * 0.005;
-            const dy = (e.clientY - this.prev.y) * 0.005;
-            // yaw left/right
-            this.el.object3D.rotation.y += dx;
-            // pitch up/down, clamped so you don't flip
-            this.el.object3D.rotation.x = THREE.MathUtils.clamp(
-              this.el.object3D.rotation.x + dy,
-              -Math.PI / 2,
-              Math.PI / 2
-            );
-            this.prev = { x: e.clientX, y: e.clientY };
-          };
-
-          canvas.addEventListener("mousedown", onDown);
-          window.addEventListener("mouseup", onUp);
-          window.addEventListener("mousemove", onMove);
-          canvas.addEventListener("touchstart", (ev) => onDown(ev.touches[0]));
-          window.addEventListener("touchend", onUp);
-          window.addEventListener("touchmove", (ev) => onMove(ev.touches[0]));
-        },
-      });
-
-      // 2) Wheel + pinch zoom
-      AFRAME.registerComponent("zoomable", {
-        init: function () {
-          const obj3D = this.el.object3D;
-          const c = this.el.sceneEl.canvas;
-          // wheel
-          c.addEventListener(
-            "wheel",
-            (e) => {
-              e.preventDefault();
-              const f = e.deltaY < 0 ? 1.1 : 0.9;
-              obj3D.scale.multiplyScalar(f);
-            },
-            { passive: false }
+        };
+        const onMove = (e) => {
+          if (!this.dragging) return;
+          const dx = (e.clientX - this.prev.x) * 0.005;
+          const dy = (e.clientY - this.prev.y) * 0.005;
+          // yaw left/right
+          this.el.object3D.rotation.y += dx;
+          // pitch up/down, clamped so you don't flip
+          this.el.object3D.rotation.x = THREE.MathUtils.clamp(
+            this.el.object3D.rotation.x + dy,
+            -Math.PI / 2,
+            Math.PI / 2
           );
-          // pinch
-          let lastDist = null;
-          c.addEventListener("touchmove", (e) => {
-            if (e.touches.length !== 2) {
-              lastDist = null;
-              return;
-            }
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
-            const d = Math.hypot(dx, dy);
-            if (lastDist) obj3D.scale.multiplyScalar(d / lastDist);
-            lastDist = d;
-          });
-          c.addEventListener("touchend", () => (lastDist = null));
-        },
-      });
+          this.prev = { x: e.clientX, y: e.clientY };
+        };
 
-      // 3) Spawn‐birds component
-      AFRAME.registerComponent("spawn-birds", {
-        init() {
+        canvas.addEventListener("mousedown", onDown);
+        window.addEventListener("mouseup", onUp);
+        window.addEventListener("mousemove", onMove);
+        canvas.addEventListener("touchstart", (ev) => onDown(ev.touches[0]));
+        window.addEventListener("touchend", onUp);
+        window.addEventListener("touchmove", (ev) => onMove(ev.touches[0]));
+      },
+    });
+
+    // 2) Wheel + pinch zoom
+    AFRAME.registerComponent("zoomable", {
+      init: function () {
+        const obj3D = this.el.object3D;
+        const c = this.el.sceneEl.canvas;
+        // wheel
+        c.addEventListener(
+          "wheel",
+          (e) => {
+            e.preventDefault();
+            const f = e.deltaY < 0 ? 1.1 : 0.9;
+            obj3D.scale.multiplyScalar(f);
+          },
+          { passive: false }
+        );
+        // pinch
+        let lastDist = null;
+        c.addEventListener("touchmove", (e) => {
+          if (e.touches.length !== 2) {
+            lastDist = null;
+            return;
+          }
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const d = Math.hypot(dx, dy);
+          if (lastDist) obj3D.scale.multiplyScalar(d / lastDist);
+          lastDist = d;
+        });
+        c.addEventListener("touchend", () => (lastDist = null));
+      },
+    });
+
+    // 3) Spawn‐birds component
+    AFRAME.registerComponent("spawn-birds", {
+      init() {
+        this.clickCount = 0;
+
+        const marker = this.el.closest("a-marker");
+
+        marker.addEventListener("markerLost", () => {
           this.clickCount = 0;
+        });
 
-          const marker = this.el.closest("a-marker");
+        this.el.addEventListener("click", () => {
+          // play pumpkin-bang immediately on ANY click
+          const pumpkinSfx = document.querySelector("#pumpkinBangingSound");
+          if (pumpkinSfx) {
+            pumpkinSfx.currentTime = 0;
+            pumpkinSfx.play();
+          }
 
-          marker.addEventListener("markerLost", () => {
-            this.clickCount = 0;
-          });
+          const pumpkin = marker.querySelector(
+            'a-entity[gltf-model="#pumpkinModel"]'
+          );
+          const flash = marker.querySelector("#pumpkinFlash");
+          const spot = marker.querySelector("#pumpkinSpot");
 
-          this.el.addEventListener("click", () => {
-            // play pumpkin-bang immediately on ANY click
-            const pumpkinSfx = document.querySelector("#pumpkinBangingSound");
-            if (pumpkinSfx) {
-              pumpkinSfx.currentTime = 0;
-              pumpkinSfx.play();
-            }
-
-            const pumpkin = marker.querySelector(
-              'a-entity[gltf-model="#pumpkinModel"]'
-            );
-            const flash = marker.querySelector("#pumpkinFlash");
-            const spot = marker.querySelector("#pumpkinSpot");
-
-            // 1) Pumpkin emissive flash
-            if (pumpkin) {
-              pumpkin.setAttribute(
-                "animation__glow",
-                `
+          // 1) Pumpkin emissive flash
+          if (pumpkin) {
+            pumpkin.setAttribute(
+              "animation__glow",
+              `
     property: material.emissiveIntensity;
     from: 0;
     to:   4;
@@ -128,15 +130,15 @@
     dir: alternate;
     loop: 6
   `
-              );
-              setTimeout(() => pumpkin.removeAttribute("animation__glow"), 600);
-            }
+            );
+            setTimeout(() => pumpkin.removeAttribute("animation__glow"), 600);
+          }
 
-            // 2) Point‐light flicker
-            if (flash) {
-              flash.setAttribute(
-                "animation__flashPL",
-                `
+          // 2) Point‐light flicker
+          if (flash) {
+            flash.setAttribute(
+              "animation__flashPL",
+              `
     property: light.intensity;
     from: 0;
     to:   10;
@@ -144,18 +146,18 @@
     dir: alternate;
     loop: 8
   `
-              );
-              setTimeout(
-                () => flash.removeAttribute("animation__flashPL"),
-                640
-              );
-            }
+            );
+            setTimeout(
+              () => flash.removeAttribute("animation__flashPL"),
+              640
+            );
+          }
 
-            // 3) Spotlight flicker
-            if (spot) {
-              spot.setAttribute(
-                "animation__flashSL",
-                `
+          // 3) Spotlight flicker
+          if (spot) {
+            spot.setAttribute(
+              "animation__flashSL",
+              `
     property: light.intensity;
     from: 0;
     to:   6;
@@ -163,374 +165,327 @@
     dir: alternate;
     loop: 8
   `
-              );
-              setTimeout(() => spot.removeAttribute("animation__flashSL"), 640);
-            }
+            );
+            setTimeout(() => spot.removeAttribute("animation__flashSL"), 640);
+          }
 
-            if (pumpkin) {
-              // animate its yaw ±5° back and forth, 6 loops (total ~600ms)
-              pumpkin.setAttribute(
-                "animation__shake",
-                `property: rotation;
+          if (pumpkin) {
+            // animate its yaw ±5° back and forth, 6 loops (total ~600ms)
+            pumpkin.setAttribute(
+              "animation__shake",
+              `property: rotation;
              from: 0 -90 0;
              to:   0 -85 0;
              dur: 100;
              dir: alternate;
              loop: 6`
-              );
-              // clean up the animation component after it finishes
-              setTimeout(() => {
-                pumpkin.removeAttribute("animation__shake");
-              }, 600);
+            );
+            // clean up the animation component after it finishes
+            setTimeout(() => {
+              pumpkin.removeAttribute("animation__shake");
+            }, 600);
+          }
+
+          this.clickCount++;
+          // every 3rd click → horror doll at screen center
+          if (this.clickCount % 3 === 0) {
+            // play doll scream
+            const dollSfx = document.querySelector("#dollSound");
+            if (dollSfx) {
+              dollSfx.currentTime = 0;
+              dollSfx.play();
             }
 
-            this.clickCount++;
-            // every 3rd click → horror doll at screen center
-            if (this.clickCount % 3 === 0) {
-              // play doll scream
-              const dollSfx = document.querySelector("#dollSound");
-              if (dollSfx) {
-                dollSfx.currentTime = 0;
-                dollSfx.play();
-              }
+            // Create the doll
+            const doll = document.createElement("a-entity");
+            doll.setAttribute("gltf-model", "#dollModel");
+            doll.setAttribute("material", "transparent: true; opacity: 0");
 
-              // Create the doll
-              const doll = document.createElement("a-entity");
-              doll.setAttribute("gltf-model", "#dollModel");
-              doll.setAttribute("material", "transparent: true; opacity: 0");
+            // 1) Pull it back to z = -3.5 so it doesn’t fill the view
+            doll.setAttribute("position", "0 0 -3.5");
 
-              // 1) Pull it back to z = -3.5 so it doesn’t fill the view
-              doll.setAttribute("position", "0 0 -3.5");
+            // 2) Start smaller
+            doll.setAttribute("scale", "0.08 0.08 0.08");
 
-              // 2) Start smaller
-              doll.setAttribute("scale", "0.08 0.08 0.08");
+            // 3) Pitch upright (X=90°), then yaw 90° so its front faces camera
+            doll.setAttribute("rotation", "0 0 0");
 
-              // 3) Pitch upright (X=90°), then yaw 90° so its front faces camera
-              doll.setAttribute("rotation", "0 0 0");
+            // Attach to the camera (center of screen)
+            const cam = document.querySelector("[camera]");
+            cam.appendChild(doll);
 
-              // Attach to the camera (center of screen)
-              const cam = document.querySelector("[camera]");
-              cam.appendChild(doll);
-
-              // 4) Fade in
-              doll.setAttribute(
-                "animation__fadein",
-                `
+            // 4) Fade in
+            doll.setAttribute(
+              "animation__fadein",
+              `
           property: material.opacity;
           to: 1; dur: 300; easing: linear
         `
-              );
+            );
 
-              // 5) Grow to a moderate size (1×1×1 instead of 2×2×2)
-              doll.setAttribute(
-                "animation__grow",
-                `
+            // 5) Grow to a moderate size (1×1×1 instead of 2×2×2)
+            doll.setAttribute(
+              "animation__grow",
+              `
           property: scale;
           to: 0.6 0.6 0.6; dur: 800; delay: 300; easing: easeOutQuad
         `
-              );
+            );
 
-              // 6) Hold, then fade out
-              doll.setAttribute(
-                "animation__fadeout",
-                `
+            // 6) Hold, then fade out
+            doll.setAttribute(
+              "animation__fadeout",
+              `
           property: material.opacity;
           to: 0; dur: 500; delay: 2000; easing: linear
         `
+            );
+
+            doll.addEventListener("animationcomplete__fadeout", () =>
+              doll.remove()
+            );
+          } else {
+            // play bat flutter when birds spawn
+            const batSfx = document.querySelector("#batSound");
+            if (batSfx) {
+              batSfx.currentTime = 0;
+              batSfx.play();
+            }
+
+            // bird-spawn code
+            const count = 5;
+            for (let i = 0; i < count; i++) {
+              const bird = document.createElement("a-entity");
+              bird.setAttribute("gltf-model", "#birdsModel");
+              bird.setAttribute(
+                "animation-mixer",
+                "clip: *; loop: repeat; timeScale: 1"
               );
+              // ↓ original 0.5 – 0.7   →  now ~0.15 – 0.25
+              const s = 0.15 + Math.random() * 0.1;
+              bird.setAttribute("scale", `${s} ${s} ${s}`);
+              bird.setAttribute("rotation", "0 240 -240");
 
-              doll.addEventListener("animationcomplete__fadeout", () =>
-                doll.remove()
-              );
-            } else {
-              // play bat flutter when birds spawn
-              const batSfx = document.querySelector("#batSound");
-              if (batSfx) {
-                batSfx.currentTime = 0;
-                batSfx.play();
-              }
+              bird.setAttribute("material", "transparent: true; opacity: 1");
 
-              // bird-spawn code
-              const count = 5;
-              for (let i = 0; i < count; i++) {
-                const bird = document.createElement("a-entity");
-                bird.setAttribute("gltf-model", "#birdsModel");
-                bird.setAttribute(
-                  "animation-mixer",
-                  "clip: *; loop: repeat; timeScale: 1"
-                );
-                // ↓ original 0.5 – 0.7   →  now ~0.15 – 0.25
-                const s = 0.15 + Math.random() * 0.1;
-                bird.setAttribute("scale", `${s} ${s} ${s}`);
-                bird.setAttribute("rotation", "0 240 -240");
+              const angle = Math.random() * Math.PI * 2;
+              const rad = 0.2 + Math.random() * 0.3;
+              const x = Math.cos(angle) * rad,
+                z = Math.sin(angle) * rad;
+              bird.setAttribute("position", `${x} 0.2 ${z}`);
 
-                bird.setAttribute("material", "transparent: true; opacity: 1");
-
-                const angle = Math.random() * Math.PI * 2;
-                const rad = 0.2 + Math.random() * 0.3;
-                const x = Math.cos(angle) * rad,
-                  z = Math.sin(angle) * rad;
-                bird.setAttribute("position", `${x} 0.2 ${z}`);
-
-                // flip X so they head back toward center
-                const targetX = -x * 10;
-                bird.setAttribute(
-                  "animation__fly",
-                  `
+              // flip X so they head back toward center
+              const targetX = -x * 10;
+              bird.setAttribute(
+                "animation__fly",
+                `
     property: position;
     to: ${targetX} 3 ${z * 10};
     dur: 2000;
     easing: linear
   `
-                );
+              );
 
-                // (optional) if you also shrink the final “grow” target:
-                const es = s * 3; // was *4
-                bird.setAttribute(
-                  "animation__grow",
-                  `
+              // (optional) if you also shrink the final “grow” target:
+              const es = s * 3; // was *4
+              bird.setAttribute(
+                "animation__grow",
+                `
   property: scale;
   to: ${es} ${es} ${es};
   dur: 2000;
   easing: linear
 `
-                );
-                bird.setAttribute(
-                  "animation__fade",
-                  `
+              );
+              bird.setAttribute(
+                "animation__fade",
+                `
             property: material.opacity;
             to: 0;
             dur: 500;
             delay: 1500
           `
-                );
+              );
 
-                marker.appendChild(bird);
-                bird.addEventListener("animationcomplete__fade", () =>
-                  bird.remove()
-                );
-              }
+              marker.appendChild(bird);
+              bird.addEventListener("animationcomplete__fade", () =>
+                bird.remove()
+              );
             }
-          });
-        },
-      });
-
-      // 4) Auto-resume audio
-      document.addEventListener("DOMContentLoaded", () => {
-        const scene = document.querySelector("a-scene");
-        scene.addEventListener("loaded", () => {
-          const ctx = scene.systems.sound.context;
-          if (ctx && ctx.state === "suspended") ctx.resume();
+          }
         });
+      },
+    });
+
+    // 4) Auto-resume audio
+    document.addEventListener("DOMContentLoaded", () => {
+      const scene = document.querySelector("a-scene");
+      scene.addEventListener("loaded", () => {
+        const ctx = scene.systems.sound.context;
+        if (ctx && ctx.state === "suspended") ctx.resume();
       });
-    </script>
-  </head>
+    });
+  </script>
+</head>
 
-  <body>
-    <a-scene
-      embedded
-      vr-mode-ui="enabled: false"
-      arjs="sourceType: webcam; debugUIEnabled: false; markersAreaEnabled: true"
-      cursor="rayOrigin: mouse"
-    >
-      <!-- Assets -->
-      <a-assets>
-        <a-asset-item id="bookModel" src="models/book.glb"></a-asset-item>
-        <a-asset-item
-          id="pumpkinModel"
-          src="models/halloween_pumpkin.glb"
-        ></a-asset-item>
-        <a-asset-item id="angelModel" src="models/angel.glb"></a-asset-item>
-        <a-asset-item
-          id="birdsModel"
-          src="models/vampire_bat.glb"
-        ></a-asset-item>
-        <a-asset-item
-          id="dollModel"
-          src="models/spider_doll.glb"
-        ></a-asset-item>
-        <a-asset-item id="laptopModel" src="models/laptop.glb"></a-asset-item>
+<body>
+  <a-scene embedded vr-mode-ui="enabled: false"
+    arjs="sourceType: webcam; debugUIEnabled: false; markersAreaEnabled: true" cursor="rayOrigin: mouse">
+    <!-- Assets -->
+    <a-assets>
+      <a-asset-item id="spooky_house" src="models/spooky_house.glb"></a-asset-item>
+      <a-asset-item id="pumpkinModel" src="models/halloween_pumpkin.glb"></a-asset-item>
+      <a-asset-item id="angelModel" src="models/angel.glb"></a-asset-item>
+      <a-asset-item id="birdsModel" src="models/vampire_bat.glb"></a-asset-item>
+      <a-asset-item id="dollModel" src="models/spider_doll.glb"></a-asset-item>
+      <a-asset-item id="laptopModel" src="models/laptop.glb"></a-asset-item>
+      <a-asset-item id="lanternKnightModel" src="models/pumpkin_lantern_knight.glb"></a-asset-item>
+      <!-- <a-asset-item id="groundModel" src="models/ground.glb"></a-asset-item> -->
+      <a-asset-item id="witchapprenticeModel" src="models/witchapprentice.glb"></a-asset-item>
 
-        <audio id="pageSound" src="sounds/page-turn.mp3" preload="auto"></audio>
-        <audio
-          id="halloweenHorrorSound"
-          src="sounds/halloween_horror_bgm.mp3"
-          preload="auto"
-        ></audio>
-        <audio id="typingSound" src="sounds/typing.mp3" preload="auto"></audio>
-        <audio
-          id="dollSound"
-          src="sounds/halloween_doll.mp3"
-          preload="auto"
-        ></audio>
-        <audio
-          id="pumpkinBangingSound"
-          src="sounds/halloween_pumpkin_banging.mp3"
-          preload="auto"
-        ></audio>
-        <audio
-          id="batSound"
-          src="sounds/halloween_bat.mp3"
-          preload="auto"
-        ></audio>
-      </a-assets>
 
-      <!-- Global lights -->
-      <a-entity
-        light="type: ambient;    intensity: 0.6; color: #fff"
-      ></a-entity>
-      <a-entity
-        light="type: directional; intensity: 0.8"
-        position="1 2 1"
-      ></a-entity>
-      <a-entity
-        light="type: hemisphere;  color: #fff; groundColor: #444; intensity: 1"
-      ></a-entity>
 
-      <!-- BOOK marker: page-turn on markerFound -->
-      <a-marker
-        id="bookMarker"
-        type="pattern"
-        url="markers/book.patt"
-        emitevents
-        smooth="true"
-        smoothCount="10"
-        smoothTolerance="0.01"
-        sound="src: #pageSound; on: markerFound; positional: false"
-      >
-        <a-entity drag-rotate-3d zoomable scale="0.01 0.01 0.01">
-          <a-gltf-model src="#bookModel"></a-gltf-model>
-        </a-entity>
-      </a-marker>
 
-      <!-- PUMPKIN Marker: pumpkin + angel + click-to-spawn-birds -->
-      <a-marker
-        id="pumpkinMarker"
-        type="pattern"
-        url="markers/pumpkin.patt"
-        emitevents
-        smooth="true"
-        smoothCount="10"
-        smoothTolerance="0.01"
-      >
-        <!-- single container for both pumpkin + angel + click-plane -->
-        <a-entity drag-rotate-3d zoomable scale="1 1 1">
-          <!-- your pumpkin -->
-          <a-entity
-            gltf-model="#pumpkinModel"
-            rotation="0 -90 0"
-            animation-mixer="clip: anim; loop: repeat; timeScale: 1"
-            material="emissive: #000000; emissiveIntensity: 0"
-          ></a-entity>
+      <audio id="pageSound" src="sounds/page-turn.mp3" preload="auto"></audio>
+      <audio id="halloweenHorrorSound" src="sounds/halloween_horror_bgm.mp3" preload="auto"></audio>
+      <audio id="typingSound" src="sounds/typing.mp3" preload="auto"></audio>
+      <audio id="dollSound" src="sounds/halloween_doll.mp3" preload="auto"></audio>
+      <audio id="pumpkinBangingSound" src="sounds/halloween_pumpkin_banging.mp3" preload="auto"></audio>
+      <audio id="batSound" src="sounds/halloween_bat.mp3" preload="auto"></audio>
+    </a-assets>
 
-          <!-- perched angel (now part of same container) -->
-          <a-entity
-            gltf-model="#angelModel"
-            position="0 0.5 0"
-            scale="60 60 60"
-            animation-mixer="clip: anim; loop: repeat; timeScale: 1"
-          ></a-entity>
+    <!-- Global lights -->
+    <a-entity light="type: ambient;    intensity: 0.6; color: #fff"></a-entity>
+    <a-entity light="type: directional; intensity: 0.8" position="1 2 1"></a-entity>
+    <a-entity light="type: hemisphere;  color: #fff; groundColor: #444; intensity: 1"></a-entity>
+    <a-entity light="type: ambient; color: #FFFFFF; intensity: 1"></a-entity>
 
-          <!-- Point light for broad glow -->
-          <a-entity
-            id="pumpkinFlash"
-            light="type: point; color: #ff5500; intensity: 0; distance: 8; decay: 2"
-            position="0 0.8 -0.5"
-          >
-          </a-entity>
-
-          <!-- Spotlight for sharp beam -->
-          <a-entity
-            id="pumpkinSpot"
-            light="type: spot; color: #ff8800; intensity: 0; angle:45; penumbra:1; distance:10; decay:2"
-            position="0 2 -1"
-            rotation="-90 0 0"
-          >
-          </a-entity>
-
-          <!-- invisible cylinder collider around the pumpkin -->
-          <a-cylinder
-            class="clickable-pumpkin"
-            spawn-birds
-            radius="1.5"
-            height="1.5"
-            position="0 0.6 0"
-            material="opacity: 0; transparent: true"
-          ></a-cylinder>
-        </a-entity>
-      </a-marker>
-
-      <!-- LAPTOP marker: typing on click only -->
-      <a-marker
-        id="laptopMarker"
-        type="pattern"
-        url="markers/laptop.patt"
-        emitevents
-        smooth="true"
-        smoothCount="10"
-        smoothTolerance="0.01"
-      >
-        <a-entity drag-rotate-3d zoomable scale="6 6 6">
-          <a-entity
-            particle-system="preset: dust; particleCount: 500; size: 0.02"
-            position="0 0.2 0"
-          ></a-entity>
-
-          <!-- Invisible plane for click; toggled by marker events -->
-          <a-plane
-            id="laptopClick"
-            class="clickable-laptop"
-            width="1.5"
-            height="1"
-            rotation="-90 0 0"
-            position="0 0.2 0"
-            opacity="0"
-            sound="src: #typingSound; on: click; positional: false"
-          ></a-plane>
-
-          <a-gltf-model src="#laptopModel"></a-gltf-model>
-        </a-entity>
-      </a-marker>
-
-      <!-- Camera + cursor (now listening for both laptop & pumpkin clicks) -->
-      <a-entity camera look-controls="enabled: false">
-        <a-entity
-          cursor="rayOrigin: mouse"
-          raycaster="objects: .clickable-laptop, .clickable-pumpkin"
-        ></a-entity>
+    <!-- BOOK marker: page-turn on markerFound -->
+    <a-marker id="bookMarker" type="pattern" url="markers/ghost.patt" emitevents smooth="true" smoothCount="10"
+      smoothTolerance="0.01" sound="src: #pageSound; on: markerFound; positional: false">
+      <!-- point‐light -->
+      <a-entity light="type: point; color: #fff; intensity: 1.2; distance: 10; decay: 2" position="0 2 1">
       </a-entity>
-    </a-scene>
+      <!-- <a-entity gltf-model="#groundModel" position="0 0 0" rotation="-90 0 0" scale="0.25 0.25 0.25">
+      </a-entity> -->
 
-    <!-- Toggle laptopClick’s sound component only while its marker is visible -->
-    <script>
-      const laptopMarker = document.querySelector("#laptopMarker");
-      const laptopPlane = document.querySelector("#laptopClick");
+      <!-- container for house + knights -->
+      <a-entity drag-rotate-3d zoomable scale="2 2 2">
+        <a-gltf-model src="#spooky_house" animation-mixer="clip: ArmatureAction; loop: repeat; timeScale: 1">
+        </a-gltf-model>
 
-      laptopMarker.addEventListener("markerFound", () => {
-        // Restore the sound component when the marker appears
-        laptopPlane.setAttribute(
-          "sound",
-          "src: #typingSound; on: click; positional: false"
-        );
-      });
-      laptopMarker.addEventListener("markerLost", () => {
-        // Remove the sound component when the marker is gone
-        laptopPlane.removeAttribute("sound");
-      });
-    </script>
-    <!-- horror‐BGM toggles -->
-    <script>
-      const pumpkinMarker = document.querySelector("#pumpkinMarker");
-      const horrorBgm = document.querySelector("#halloweenHorrorSound");
-      horrorBgm.loop = true;
-      pumpkinMarker.addEventListener("markerFound", () => {
-        horrorBgm.currentTime = 0;
-        horrorBgm.play();
-      });
-      pumpkinMarker.addEventListener("markerLost", () => {
-        horrorBgm.pause();
-        horrorBgm.currentTime = 0;
-      });
-    </script>
-  </body>
+        <!-- LEFT knight wrapper: stand up on X -->
+        <a-entity position="-1 0.15 0.6" rotation="-90 0 0">
+          <!-- inner: face the house on Y -->
+          <a-entity gltf-model="#lanternKnightModel" rotation="90 45 45" scale="0.3 0.3 0.3"
+            animation-mixer="clip: Take 001; loop: repeat; timeScale: 1">
+          </a-entity>
+        </a-entity>
+
+        <!-- RIGHT knight wrapper -->
+        <a-entity position=" 1 0.15 0.6" rotation="-90 0 0">
+          <a-entity gltf-model="#lanternKnightModel" rotation="90 45 45" scale="0.3 0.3 0.3"
+            animation-mixer="clip: Take 001; loop: repeat; timeScale: 1">
+          </a-entity>
+        </a-entity>
+
+        <a-entity position="0 1.5 0" 
+          animation="property: rotation;
+          to: 0 360 0;
+          dur: 12000;
+          loop: true;
+          easing: linear">
+          <!-- offset out on Z so she orbits around the house -->
+          <a-entity gltf-model="#witchapprenticeModel" scale="0.01 0.01 0.01" position="0 -0.5 1" animation-mixer="clip: Take 001; loop: repeat; timeScale: 1">
+          </a-entity>
+        </a-entity>
+
+      </a-entity>
+    </a-marker>
+
+
+
+    <!-- PUMPKIN Marker: pumpkin + angel + click-to-spawn-birds -->
+    <a-marker id="pumpkinMarker" type="pattern" url="markers/pumpkin.patt" emitevents smooth="true" smoothCount="10"
+      smoothTolerance="0.01">
+      <!-- single container for both pumpkin + angel + click-plane -->
+      <a-entity drag-rotate-3d zoomable scale="1 1 1">
+        <!-- your pumpkin -->
+        <a-entity gltf-model="#pumpkinModel" rotation="0 -90 0" animation-mixer="clip: anim; loop: repeat; timeScale: 1"
+          material="emissive: #000000; emissiveIntensity: 0"></a-entity>
+
+        <!-- perched angel (now part of same container) -->
+        <a-entity gltf-model="#angelModel" position="0 0.5 0" scale="60 60 60"
+          animation-mixer="clip: anim; loop: repeat; timeScale: 1"></a-entity>
+
+        <!-- Point light for broad glow -->
+        <a-entity id="pumpkinFlash" light="type: point; color: #ff5500; intensity: 0; distance: 8; decay: 2"
+          position="0 0.8 -0.5">
+        </a-entity>
+
+        <!-- Spotlight for sharp beam -->
+        <a-entity id="pumpkinSpot"
+          light="type: spot; color: #ff8800; intensity: 0; angle:45; penumbra:1; distance:10; decay:2" position="0 2 -1"
+          rotation="-90 0 0">
+        </a-entity>
+
+        <!-- invisible cylinder collider around the pumpkin -->
+        <a-cylinder class="clickable-pumpkin" spawn-birds radius="1.5" height="1.5" position="0 0.6 0"
+          material="opacity: 0; transparent: true"></a-cylinder>
+      </a-entity>
+    </a-marker>
+
+    <!-- LAPTOP marker: typing on click only -->
+    <a-marker id="laptopMarker" type="pattern" url="markers/laptop.patt" emitevents smooth="true" smoothCount="10"
+      smoothTolerance="0.01">
+      <a-entity drag-rotate-3d zoomable scale="6 6 6">
+        <a-entity particle-system="preset: dust; particleCount: 500; size: 0.02" position="0 0.2 0"></a-entity>
+
+        <!-- Invisible plane for click; toggled by marker events -->
+        <a-plane id="laptopClick" class="clickable-laptop" width="1.5" height="1" rotation="-90 0 0" position="0 0.2 0"
+          opacity="0" sound="src: #typingSound; on: click; positional: false"></a-plane>
+
+        <a-gltf-model src="#laptopModel"></a-gltf-model>
+      </a-entity>
+    </a-marker>
+
+    <!-- Camera + cursor (now listening for both laptop & pumpkin clicks) -->
+    <a-entity camera look-controls="enabled: false">
+      <a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable-laptop, .clickable-pumpkin"></a-entity>
+    </a-entity>
+  </a-scene>
+
+  <!-- Toggle laptopClick’s sound component only while its marker is visible -->
+  <script>
+    const laptopMarker = document.querySelector("#laptopMarker");
+    const laptopPlane = document.querySelector("#laptopClick");
+
+    laptopMarker.addEventListener("markerFound", () => {
+      // Restore the sound component when the marker appears
+      laptopPlane.setAttribute(
+        "sound",
+        "src: #typingSound; on: click; positional: false"
+      );
+    });
+    laptopMarker.addEventListener("markerLost", () => {
+      // Remove the sound component when the marker is gone
+      laptopPlane.removeAttribute("sound");
+    });
+  </script>
+  <!-- horror‐BGM toggles -->
+  <script>
+    const pumpkinMarker = document.querySelector("#pumpkinMarker");
+    const horrorBgm = document.querySelector("#halloweenHorrorSound");
+    horrorBgm.loop = true;
+    pumpkinMarker.addEventListener("markerFound", () => {
+      horrorBgm.currentTime = 0;
+      horrorBgm.play();
+    });
+    pumpkinMarker.addEventListener("markerLost", () => {
+      horrorBgm.pause();
+      horrorBgm.currentTime = 0;
+    });
+  </script>
+</body>
+
 </html>
