@@ -325,6 +325,66 @@
         if (ctx && ctx.state === "suspended") ctx.resume();
       });
     });
+
+    AFRAME.registerComponent("chucky-behavior", {
+      schema: {
+        speed: { type: "number", default: 0.005 },    // walking speed per tick
+        attackDistance: { type: "number", default: 0.3 } // when to switch to attack
+      },
+      init() {
+        this.marker = document.querySelector("#babyMarker");
+        this.babyEl = document.querySelector("#baby");
+        this.modelEl = this.el;
+        this.walking = false;
+
+        this.onMarkerFound = this.onMarkerFound.bind(this);
+        this.marker.addEventListener("markerFound", this.onMarkerFound);
+      },
+      onMarkerFound() {
+        // reset to start 1 unit left of baby
+        const babyPos = this.babyEl.object3D.position;
+        this.modelEl.object3D.position.set(babyPos.x - 4, babyPos.y, babyPos.z);
+
+        // start walk animation + sound
+        this.modelEl.setAttribute("animation-mixer", {
+          clip: "Armature|Chucky_WALK_FORWARD",
+          loop: "repeat",
+          timeScale: 1
+        });
+        this.modelEl.emit("startWalk");
+
+        this.walking = true;
+      },
+      tick() {
+        if (!this.walking) return;
+        const babyPos = this.babyEl.object3D.position;
+        const pos = this.modelEl.object3D.position;
+        // compute direction vector toward baby (horizontal only)
+        const dx = babyPos.x - pos.x;
+        const dz = babyPos.z - pos.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist < this.data.attackDistance) {
+          // close enough: switch to attack
+          this.modelEl.setAttribute("animation-mixer", {
+            clip: "Armature|Chucky_ATTACK-KNIFE-02",
+            loop: "repeat",
+            timeScale: 1
+          });
+          this.walking = false;
+          return;
+        }
+        // move a little toward baby each frame
+        pos.x += (dx / dist) * this.data.speed;
+        pos.z += (dz / dist) * this.data.speed;
+        // optionally rotate Chucky to face the baby
+        const angle = Math.atan2(dx, dz) * (180 / Math.PI);
+        this.modelEl.object3D.rotation.y = THREE.MathUtils.degToRad(angle);
+      },
+      remove() {
+        this.marker.removeEventListener("markerFound", this.onMarkerFound);
+      }
+    });
+
   </script>
 </head>
 
@@ -342,9 +402,8 @@
       <a-asset-item id="lanternKnightModel" src="models/pumpkin_lantern_knight.glb"></a-asset-item>
       <!-- <a-asset-item id="groundModel" src="models/ground.glb"></a-asset-item> -->
       <a-asset-item id="witchapprenticeModel" src="models/witchapprentice.glb"></a-asset-item>
-
-
-
+      <a-asset-item id="babyModel" src="models/gregory.glb"></a-asset-item>
+      <a-asset-item id="chuckyModel" src="models/chucky.glb"></a-asset-item>
 
       <audio id="pageSound" src="sounds/page-turn.mp3" preload="auto"></audio>
       <audio id="halloweenHorrorSound" src="sounds/halloween_horror_bgm.mp3" preload="auto"></audio>
@@ -352,6 +411,8 @@
       <audio id="dollSound" src="sounds/halloween_doll.mp3" preload="auto"></audio>
       <audio id="pumpkinBangingSound" src="sounds/halloween_pumpkin_banging.mp3" preload="auto"></audio>
       <audio id="batSound" src="sounds/halloween_bat.mp3" preload="auto"></audio>
+      <audio id="chuckySound" src="sounds/chuckySound.mp3" preload="auto"></audio>
+      <audio id="babySound" src="sounds/remusic-scary-loud-screaming-279745.mp3" preload="auto"></audio>
     </a-assets>
 
     <!-- Global lights -->
@@ -389,14 +450,14 @@
           </a-entity>
         </a-entity>
 
-        <a-entity position="0 1.5 0" 
-          animation="property: rotation;
+        <a-entity position="0 1.5 0" animation="property: rotation;
           to: 0 360 0;
           dur: 12000;
           loop: true;
           easing: linear">
           <!-- offset out on Z so she orbits around the house -->
-          <a-entity gltf-model="#witchapprenticeModel" scale="0.01 0.01 0.01" position="0 -0.5 1" animation-mixer="clip: Take 001; loop: repeat; timeScale: 1">
+          <a-entity gltf-model="#witchapprenticeModel" scale="0.01 0.01 0.01" position="0 -0.5 1"
+            animation-mixer="clip: Take 001; loop: repeat; timeScale: 1">
           </a-entity>
         </a-entity>
 
@@ -436,17 +497,18 @@
     </a-marker>
 
     <!-- LAPTOP marker: typing on click only -->
-    <a-marker id="laptopMarker" type="pattern" url="markers/laptop.patt" emitevents smooth="true" smoothCount="10"
+    <a-marker id="babyMarker" type="pattern" url="markers/chair.patt" emitevents smooth="true" smoothCount="10"
       smoothTolerance="0.01">
-      <a-entity drag-rotate-3d zoomable scale="6 6 6">
-        <a-entity particle-system="preset: dust; particleCount: 500; size: 0.02" position="0 0.2 0"></a-entity>
-
-        <!-- Invisible plane for click; toggled by marker events -->
-        <a-plane id="laptopClick" class="clickable-laptop" width="1.5" height="1" rotation="-90 0 0" position="0 0.2 0"
-          opacity="0" sound="src: #typingSound; on: click; positional: false"></a-plane>
-
-        <a-gltf-model src="#laptopModel"></a-gltf-model>
+      <!-- Baby sits at origin -->
+      <a-entity id="baby" gltf-model="#babyModel" drag-rotate-3d zoomable scale="2 2 2" rotation="-90 0 0"
+        position="0 0 0.1">
+        <a-sound id="babyScream" src="#babySound" on="markerFound" positional="false"></a-sound>
       </a-entity>
+
+      <!-- Chucky follows the baby then attacks -->
+      <a-entity id="chucky" chucky-behavior="speed: 0.08; attackDistance: 0.3" drag-rotate-3d zoomable
+        gltf-model="#chuckyModel" scale="0.007 0.007 0.007" rotation="0 0 -90" animation="startEvents: startWalk"
+        sound="src: #chuckySound; on: startWalk; positional: false"></a-entity>
     </a-marker>
 
     <!-- Camera + cursor (now listening for both laptop & pumpkin clicks) -->
