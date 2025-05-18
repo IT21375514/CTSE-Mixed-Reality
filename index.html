@@ -56,7 +56,7 @@
           window.addEventListener("touchmove", (ev) => onMove(ev.touches[0]));
         },
       });
-      
+
       // Zoomable by wheel & pinch
       AFRAME.registerComponent("zoomable", {
         init: function () {
@@ -98,6 +98,118 @@
         });
       });
     </script>
+    <!-- 
+      <script>
+    AFRAME.registerComponent('auto-scale', {
+      schema: { desiredSize: { type: 'number', default: 1 } },
+      init: function () {
+        this.el.addEventListener('model-loaded', (e) => {
+          const obj = e.detail.model;                  // THREE.Object3D
+          const box = new THREE.Box3().setFromObject(obj);
+          const size = new THREE.Vector3();
+          box.getSize(size);                           // size.x, size.y, size.z
+          const maxAxis = Math.max(size.x, size.y, size.z);
+          const scale = this.data.desiredSize / maxAxis;
+          obj.scale.set(scale, scale, scale);
+        });
+      }
+    });
+  </script> -->
+
+    <!-- <script>
+  AFRAME.registerComponent('chucky-behavior', {
+    init: function () {
+      const marker = document.querySelector('#chuckyMarker');
+      const modelEl = this.el;
+
+      marker.addEventListener('markerFound', () => {
+        // 1) Jump to starting position
+        modelEl.object3D.position.set(0, 0, -2);
+
+        // 2) Play walk animation
+        modelEl.setAttribute('animation-mixer', {
+          clip: 'walk',
+          loop: 'repeat'
+        });
+
+        // 3) Trigger the position animation
+        modelEl.emit('chuckyWalkStart');
+      });
+
+      // Listen for the end of the move animation
+      modelEl.addEventListener('animationcomplete', (evt) => {
+        if (evt.detail.name === 'walkToMarker') {
+          // Switch to stabbing clip once arrived
+          modelEl.setAttribute('animation-mixer', {
+            clip: 'stab',
+            loop: 'repeat'
+          });
+        }
+      });
+    }
+  });
+</script> -->
+    <script>
+  AFRAME.registerComponent("chucky-behavior", {
+    schema: {
+      speed: { type: "number", default: 0.005 },    // walking speed per tick
+      attackDistance: { type: "number", default: 0.3 } // when to switch to attack
+    },
+    init() {
+      this.marker = document.querySelector("#babyMarker");
+      this.babyEl = document.querySelector("#baby");
+      this.modelEl = this.el;
+      this.walking = false;
+
+      this.onMarkerFound = this.onMarkerFound.bind(this);
+      this.marker.addEventListener("markerFound", this.onMarkerFound);
+    },
+    onMarkerFound() {
+      // reset to start 1 unit left of baby
+      const babyPos = this.babyEl.object3D.position;
+      this.modelEl.object3D.position.set(babyPos.x - 4, babyPos.y, babyPos.z);
+
+      // start walk animation + sound
+      this.modelEl.setAttribute("animation-mixer", {
+        clip: "Armature|Chucky_WALK_FORWARD",
+        loop: "repeat",
+        timeScale: 1
+      });
+      this.modelEl.emit("startWalk");
+
+      this.walking = true;
+    },
+    tick() {
+      if (!this.walking) return;
+      const babyPos = this.babyEl.object3D.position;
+      const pos  = this.modelEl.object3D.position;
+      // compute direction vector toward baby (horizontal only)
+      const dx = babyPos.x - pos.x;
+      const dz = babyPos.z - pos.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < this.data.attackDistance) {
+        // close enough: switch to attack
+        this.modelEl.setAttribute("animation-mixer", {
+          clip: "Armature|Chucky_ATTACK-KNIFE-02",
+          loop: "repeat",
+          timeScale: 1
+        });
+        this.walking = false;
+        return;
+      }
+      // move a little toward baby each frame
+      pos.x += (dx / dist) * this.data.speed;
+      pos.z += (dz / dist) * this.data.speed;
+      // optionally rotate Chucky to face the baby
+      const angle = Math.atan2(dx, dz) * (180 / Math.PI);
+      this.modelEl.object3D.rotation.y = THREE.MathUtils.degToRad(angle);
+    },
+    remove() {
+      this.marker.removeEventListener("markerFound", this.onMarkerFound);
+    }
+  });
+</script>
+
   </head>
 
   <body>
@@ -112,6 +224,8 @@
         <a-asset-item id="bookModel" src="models/book.glb"></a-asset-item>
         <a-asset-item id="chairModel" src="models/angel.glb"></a-asset-item>
         <a-asset-item id="laptopModel" src="models/laptop.glb"></a-asset-item>
+        <a-asset-item id="babyModel" src="models/gregory.glb"></a-asset-item>
+        <a-asset-item id="chuckyModel" src="models/chucky.glb"></a-asset-item>
 
         <audio id="pageSound" src="sounds/page-turn.mp3" preload="auto"></audio>
         <audio
@@ -120,6 +234,16 @@
           preload="auto"
         ></audio>
         <audio id="typingSound" src="sounds/typing.mp3" preload="auto"></audio>
+        <audio
+          id="chuckySound"
+          src="sounds/chuckySound.mp3"
+          preload="auto"
+        ></audio>
+        <audio
+          id="babySound"
+          src="sounds/remusic-scary-loud-screaming-279745.mp3"
+          preload="auto"
+        ></audio>
       </a-assets>
 
       <!-- Lighting -->
@@ -140,7 +264,7 @@
         smoothTolerance="0.01"
         sound="src: #pageSound; on: markerFound; positional: false"
       >
-        <a-entity drag-rotate-3d zoomable scale="0.01 0.01 0.01">
+        <a-entity drag-rotate-3d zoomable scale="0.001 0.001 0.001">
           <a-gltf-model src="#bookModel"></a-gltf-model>
         </a-entity>
       </a-marker>
@@ -149,7 +273,7 @@
       <a-marker
         id="chairMarker"
         type="pattern"
-        url="markers/chair.patt"
+        url="markers/ball.patt"
         emitevents
         smooth="true"
         smoothCount="10"
@@ -160,7 +284,7 @@
         <a-entity drag-rotate-3d zoomable scale="12 12 12">
           <!-- your animated model -->
           <a-entity
-            gltf-model="#chairModel"
+            gltf-model="#angelModel"
             animation-mixer="clip: anim; loop: repeat; timeScale: 1"
           ></a-entity>
         </a-entity>
@@ -205,7 +329,92 @@
           raycaster="objects: .clickable-laptop"
         ></a-entity>
       </a-entity>
+
+
+
+<!----------------------------------------------------------------------------------------------------------------------->
+
+
+<a-marker
+  id="babyMarker"
+  type="pattern"
+  url="markers/chair.patt"
+  emitevents
+  smooth="true"
+  smoothCount="10"
+  smoothTolerance="0.01"
+>
+  <!-- Baby sits at origin -->
+  <a-entity
+    id="baby"
+    gltf-model="#babyModel"
+    drag-rotate-3d
+    zoomable
+    scale="2 2 2"
+    rotation="-90 0 0"
+    position="0 0 0.1"
+  >
+    <a-sound
+      id="babyScream"
+      src="#babySound"
+      on="markerFound"
+      positional="false"
+    ></a-sound>
+  </a-entity>
+
+  <!-- Chucky follows the baby then attacks -->
+  <a-entity
+    id="chucky"
+    chucky-behavior="speed: 0.08; attackDistance: 0.3"
+    drag-rotate-3d
+    zoomable
+    gltf-model="#chuckyModel"
+    scale="0.007 0.007 0.007"   
+    rotation="0 0 -90"
+    animation="startEvents: startWalk" 
+    sound="src: #chuckySound; on: startWalk; positional: false"
+  ></a-entity>
+</a-marker>
+
+
+   
+
     </a-scene>
+<!-- 
+    <script>
+      AFRAME.registerComponent("chucky-behavior", {
+        init: function () {
+          const marker = document.querySelector("#chuckyMarker");
+          const modelEl = this.el;
+
+          // When the marker first appears:
+          marker.addEventListener("markerFound", () => {
+            // 1) Reset position 2 units back
+            modelEl.object3D.position.set(0, 0, -2);
+            // 2) Start walk animation
+            modelEl.setAttribute("animation-mixer", {
+              clip: "Armature|Chucky_WALK_FORWARD",
+              loop: "repeat",
+              timeScale: 1,
+            });
+            // 3) Fire event to move forward and play sound
+            modelEl.emit("chuckyWalkStart");
+          });
+
+          // When the move‐to‐marker animation finishes:
+          modelEl.addEventListener("animationcomplete", (evt) => {
+            if (evt.detail.name === "walkToMarker") {
+              // Switch to attack clip
+              modelEl.setAttribute("animation-mixer", {
+                clip: "Armature|Chucky_ATTACK-KNIFE-02",
+                loop: "repeat",
+                timeScale: 1,
+              });
+            }
+          });
+        },
+      });
+    </script> -->
 
     <!-- Toggle laptopClick’s sound component only while its marker is visible -->
     <script>
