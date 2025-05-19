@@ -385,6 +385,54 @@
       }
     });
 
+AFRAME.registerComponent('dblclick-rotate-visibility', {
+    init: function () {
+      // start hidden
+      this.el.setAttribute('visible', false);
+
+      // bind for cleanup
+      this._onDblClick = this._onDblClick.bind(this);
+
+      // wait until the scene & canvas are ready
+      this.el.sceneEl.addEventListener('loaded', () => {
+        const canvas = this.el.sceneEl.canvas;
+        if (!canvas) {
+          console.warn('[dblclick-rotate-visibility] no canvas found');
+          return;
+        }
+        // listen for a double-click anywhere on the AR canvas
+        canvas.addEventListener('dblclick', this._onDblClick);
+      });
+    },
+
+    _onDblClick: function (evt) {
+      // only react to left-button
+      if (evt.button !== 0) { return; }
+      const isVisible = this.el.getAttribute('visible');
+      if (isVisible) {
+        // hide & stop spinning
+        this.el.setAttribute('visible', false);
+        this.el.removeAttribute('animation__rotate');
+      } else {
+        // show & start spinning
+        this.el.setAttribute('visible', true);
+        this.el.setAttribute('animation__rotate', {
+          property: 'rotation',
+          to:       '0 360 0',
+          dur:      12000,
+          loop:     true,
+          easing:   'linear'
+        });
+      }
+    },
+
+    remove: function () {
+      // cleanup listener
+      const canvas = this.el.sceneEl && this.el.sceneEl.canvas;
+      if (canvas) { canvas.removeEventListener('dblclick', this._onDblClick); }
+    }
+  });
+
   </script>
 </head>
 
@@ -405,7 +453,7 @@
       <a-asset-item id="babyModel" src="models/gregory.glb"></a-asset-item>
       <a-asset-item id="chuckyModel" src="models/chucky.glb"></a-asset-item>
 
-      <audio id="pageSound" src="sounds/page-turn.mp3" preload="auto"></audio>
+      <audio id="witchSound" src="sounds/witch-laughing.mp3" preload="auto"></audio>
       <audio id="halloweenHorrorSound" src="sounds/halloween_horror_bgm.mp3" preload="auto"></audio>
       <audio id="typingSound" src="sounds/typing.mp3" preload="auto"></audio>
       <audio id="dollSound" src="sounds/halloween_doll.mp3" preload="auto"></audio>
@@ -423,7 +471,7 @@
 
     <!-- BOOK marker: page-turn on markerFound -->
     <a-marker id="bookMarker" type="pattern" url="markers/ghost.patt" emitevents smooth="true" smoothCount="10"
-      smoothTolerance="0.01" sound="src: #pageSound; on: markerFound; positional: false">
+      smoothTolerance="0.01" sound="src: #witchSound; on: markerFound; positional: false">
       <!-- point‐light -->
       <a-entity light="type: point; color: #fff; intensity: 1.2; distance: 10; decay: 2" position="0 2 1">
       </a-entity>
@@ -450,11 +498,12 @@
           </a-entity>
         </a-entity>
 
-        <a-entity position="0 1.5 0" animation="property: rotation;
+        <!-- <a-entity position="0 1.5 0" animation="property: rotation;
           to: 0 360 0;
           dur: 12000;
           loop: true;
-          easing: linear">
+          easing: linear"> -->
+        <a-entity id="witchWrapper" dblclick-rotate-visibility visible="false" position="0 1.5 0">
           <!-- offset out on Z so she orbits around the house -->
           <a-entity gltf-model="#witchapprenticeModel" scale="0.01 0.01 0.01" position="0 -0.5 1"
             animation-mixer="clip: Take 001; loop: repeat; timeScale: 1">
