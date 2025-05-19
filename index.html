@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>AR Classroom Enhanced</title>
+    <title>AR Halloween</title>
     <!-- A-Frame core -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <!-- A-Frame Extras for animation-mixer -->
@@ -522,7 +522,6 @@
           id="dollModel"
           src="models/spider_doll.glb"
         ></a-asset-item>
-        <a-asset-item id="laptopModel" src="models/laptop.glb"></a-asset-item>
         <a-asset-item
           id="lanternKnightModel"
           src="models/pumpkin_lantern_knight.glb"
@@ -757,7 +756,7 @@
       <a-marker
         id="babyMarker"
         type="pattern"
-        url="markers/chair.patt"
+        url="markers/baby.patt"
         emitevents
         smooth="true"
         smoothCount="10"
@@ -777,7 +776,7 @@
           <a-entity
             id="baby"
             gltf-model="#babyModel"
-            scale="0.7 0.7 0.7"
+            scale="1 1 1"
             rotation="0 0 0"
             position="0 0 0.1"
             sound="src: #babySound; positional: false; loop: true"
@@ -789,7 +788,7 @@
             id="chucky"
             chucky-behavior="speed: 0.08; attackDistance: 0.3"
             gltf-model="#chuckyModel"
-            scale="0.004 0.004 0.004"
+            scale="0.006 0.006 0.006"
             rotation="0 0 0"
             animation="startEvents: startWalk"
             sound="src: #chuckySound; on: startWalk; positional: false"
@@ -797,11 +796,11 @@
         </a-entity>
       </a-marker>
 
-      <!-- Camera + cursor (now listening for both laptop & pumpkin clicks) -->
+      <!-- Camera + cursor -->
       <a-entity camera look-controls="enabled: false">
         <a-entity
           cursor="rayOrigin: mouse"
-          raycaster="objects: .clickable-laptop, .clickable-pumpkin"
+          raycaster="objects: .clickable-pumpkin"
         ></a-entity>
       </a-entity>
     </a-scene>
