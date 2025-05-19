@@ -105,6 +105,9 @@
         });
 
         this.el.addEventListener("click", () => {
+          // only run this logic if the marker is actually in view:
+          if (!marker.object3D.visible) { return; }
+
           // play pumpkin-bang immediately on ANY click
           const pumpkinSfx = document.querySelector("#pumpkinBangingSound");
           if (pumpkinSfx) {
@@ -112,9 +115,18 @@
             pumpkinSfx.play();
           }
 
-          const pumpkin = marker.querySelector(
-            'a-entity[gltf-model="#pumpkinModel"]'
-          );
+          const pumpkin = marker.querySelector('#pumpkin');
+
+          if (pumpkin) {
+            pumpkin.setAttribute('animation-mixer',
+              'clip: Animation; loop: once; timeScale: 1;'
+            );
+
+            pumpkin.addEventListener('animation-finished', () => {
+              pumpkin.removeAttribute('animation-mixer');
+            }, { once: true });
+          }
+          
           const flash = marker.querySelector("#pumpkinFlash");
           const spot = marker.querySelector("#pumpkinSpot");
 
@@ -136,6 +148,7 @@
 
           // 2) Point‐light flicker
           if (flash) {
+            flash.setAttribute('visible', true); 
             flash.setAttribute(
               "animation__flashPL",
               `
@@ -147,14 +160,15 @@
     loop: 8
   `
             );
-            setTimeout(
-              () => flash.removeAttribute("animation__flashPL"),
-              640
-            );
+            setTimeout(() => {
+    flash.removeAttribute('animation__flashPL');
+    flash.setAttribute('visible', false);            // hide again
+  }, 640);
           }
 
           // 3) Spotlight flicker
           if (spot) {
+            spot.setAttribute('visible', true);
             spot.setAttribute(
               "animation__flashSL",
               `
@@ -166,7 +180,10 @@
     loop: 8
   `
             );
-            setTimeout(() => spot.removeAttribute("animation__flashSL"), 640);
+            setTimeout(() => {
+    spot.removeAttribute('animation__flashSL');
+    spot.setAttribute('visible', false);             // hide again
+  }, 640);
           }
 
           if (pumpkin) {
@@ -191,10 +208,12 @@
           if (this.clickCount % 3 === 0) {
             // play doll scream
             const dollSfx = document.querySelector("#dollSound");
-            if (dollSfx) {
-              dollSfx.currentTime = 0;
-              dollSfx.play();
-            }
+            setTimeout(() => {
+  if (dollSfx) {
+    dollSfx.currentTime = 0;
+    dollSfx.play();
+  }
+}, 500);
 
             // Create the doll
             const doll = document.createElement("a-entity");
@@ -205,7 +224,7 @@
             doll.setAttribute("position", "0 0 -3.5");
 
             // 2) Start smaller
-            doll.setAttribute("scale", "0.08 0.08 0.08");
+            doll.setAttribute("scale", "0.05 0.05 0.05");
 
             // 3) Pitch upright (X=90°), then yaw 90° so its front faces camera
             doll.setAttribute("rotation", "0 0 0");
@@ -219,7 +238,7 @@
               "animation__fadein",
               `
           property: material.opacity;
-          to: 1; dur: 300; easing: linear
+          to: 1; dur: 40; easing: linear
         `
             );
 
@@ -228,7 +247,8 @@
               "animation__grow",
               `
           property: scale;
-          to: 0.6 0.6 0.6; dur: 800; delay: 300; easing: easeOutQuad
+          from: 0.12 0.12 0.12;
+          to: 0.6 0.6 0.6; dur: 350; delay: 0; easing: easeOutQuad
         `
             );
 
@@ -256,23 +276,18 @@
             const count = 5;
             for (let i = 0; i < count; i++) {
               const bird = document.createElement("a-entity");
-              bird.setAttribute("gltf-model", "#birdsModel");
-              bird.setAttribute(
-                "animation-mixer",
-                "clip: *; loop: repeat; timeScale: 1"
-              );
-              // ↓ original 0.5 – 0.7   →  now ~0.15 – 0.25
-              const s = 0.15 + Math.random() * 0.1;
-              bird.setAttribute("scale", `${s} ${s} ${s}`);
-              bird.setAttribute("rotation", "0 240 -240");
+                bird.setAttribute("gltf-model", "#birdsModel");
+                bird.setAttribute("animation-mixer", "clip: *; loop: repeat; timeScale: 1");
+                const s = 0.5 + Math.random() * 0.2;
+                bird.setAttribute("scale", `${s} ${s} ${s}`);
+                bird.setAttribute("rotation", "-270 180 0");
+                bird.setAttribute("material", "transparent: true; opacity: 1");
 
-              bird.setAttribute("material", "transparent: true; opacity: 1");
-
-              const angle = Math.random() * Math.PI * 2;
-              const rad = 0.2 + Math.random() * 0.3;
-              const x = Math.cos(angle) * rad,
-                z = Math.sin(angle) * rad;
-              bird.setAttribute("position", `${x} 0.2 ${z}`);
+                const angle = Math.random() * Math.PI * 2;
+                const rad = 0.2 + Math.random() * 0.3;
+                const x = Math.cos(angle) * rad,
+                  z = Math.sin(angle) * rad;
+                bird.setAttribute("position", `${x} 0.2 ${z}`);
 
               // flip X so they head back toward center
               const targetX = -x * 10;
@@ -394,13 +409,15 @@
     <!-- Assets -->
     <a-assets>
       <a-asset-item id="spooky_house" src="models/spooky_house.glb"></a-asset-item>
-      <a-asset-item id="pumpkinModel" src="models/halloween_pumpkin.glb"></a-asset-item>
+      <a-asset-item id="pumpkinModel" src="models/spooky_pumpkin.glb"></a-asset-item>
       <a-asset-item id="angelModel" src="models/angel.glb"></a-asset-item>
-      <a-asset-item id="birdsModel" src="models/vampire_bat.glb"></a-asset-item>
+      <a-asset-item id="birdsModel" src="models/halloween_birds.glb"></a-asset-item>
       <a-asset-item id="dollModel" src="models/spider_doll.glb"></a-asset-item>
       <a-asset-item id="laptopModel" src="models/laptop.glb"></a-asset-item>
       <a-asset-item id="lanternKnightModel" src="models/pumpkin_lantern_knight.glb"></a-asset-item>
       <!-- <a-asset-item id="groundModel" src="models/ground.glb"></a-asset-item> -->
+      <a-asset-item id="pumpkinGroundModel" src="models/evergreen_tree_pine.glb"></a-asset-item>
+      <a-asset-item id="halloweenCar" src="models/old_rusty_car.glb"></a-asset-item>
       <a-asset-item id="witchapprenticeModel" src="models/witchapprentice.glb"></a-asset-item>
       <a-asset-item id="babyModel" src="models/gregory.glb"></a-asset-item>
       <a-asset-item id="chuckyModel" src="models/chucky.glb"></a-asset-item>
@@ -471,27 +488,37 @@
       smoothTolerance="0.01">
       <!-- single container for both pumpkin + angel + click-plane -->
       <a-entity drag-rotate-3d zoomable scale="1 1 1">
+
+        <a-entity gltf-model="#pumpkinGroundModel" position="1 -0.1 -1" rotation="0 0 0" scale="0.5 0.5 0.5">
+        </a-entity>
+
+            <a-gltf-model src="#halloweenCar"
+                  position="-0.8 0 -1.3"
+                  rotation="0 0 0"
+                  scale="0.0024 0.0024 0.0024"></a-gltf-model>
+        
         <!-- your pumpkin -->
-        <a-entity gltf-model="#pumpkinModel" rotation="0 -90 0" animation-mixer="clip: anim; loop: repeat; timeScale: 1"
+        <a-entity id="pumpkin" gltf-model="#pumpkinModel" rotation="0 -90 0" scale="0.05 0.05 0.05"
           material="emissive: #000000; emissiveIntensity: 0"></a-entity>
 
         <!-- perched angel (now part of same container) -->
-        <a-entity gltf-model="#angelModel" position="0 0.5 0" scale="60 60 60"
+        <a-entity gltf-model="#angelModel" position="0 0.20 0" scale="25 25 25"
           animation-mixer="clip: anim; loop: repeat; timeScale: 1"></a-entity>
 
         <!-- Point light for broad glow -->
-        <a-entity id="pumpkinFlash" light="type: point; color: #ff5500; intensity: 0; distance: 8; decay: 2"
+        <a-entity id="pumpkinFlash" visible="false" light="type: point; color: #ff5500; intensity: 0; distance: 8; decay: 2"
           position="0 0.8 -0.5">
         </a-entity>
 
         <!-- Spotlight for sharp beam -->
         <a-entity id="pumpkinSpot"
+          visible="false"
           light="type: spot; color: #ff8800; intensity: 0; angle:45; penumbra:1; distance:10; decay:2" position="0 2 -1"
           rotation="-90 0 0">
         </a-entity>
 
         <!-- invisible cylinder collider around the pumpkin -->
-        <a-cylinder class="clickable-pumpkin" spawn-birds radius="1.5" height="1.5" position="0 0.6 0"
+        <a-cylinder class="clickable-pumpkin" spawn-birds radius="0.6" height="0.7" position="0 0.35 0"
           material="opacity: 0; transparent: true"></a-cylinder>
       </a-entity>
     </a-marker>
