@@ -511,11 +511,13 @@
 
       <!-- container for house + knights -->
       <a-entity drag-rotate-3d zoomable scale="2 2 2">
+        <a-entity gltf-model="#pumpkinGroundModel" position="1 -0.1 -1" rotation="0 0 0" scale="0.7 0.7 0.7">
+        </a-entity>
         <a-gltf-model src="#spooky_house" animation-mixer="clip: ArmatureAction; loop: repeat; timeScale: 1">
         </a-gltf-model>
 
         <!-- LEFT knight wrapper: stand up on X -->
-        <a-entity position="-1 0.15 0.6" rotation="-90 0 0">
+        <a-entity position="-1 0.25 0.6" rotation="-90 0 0">
           <!-- inner: face the house on Y -->
           <a-entity gltf-model="#lanternKnightModel" rotation="90 45 45" scale="0.3 0.3 0.3"
             animation-mixer="clip: Take 001; loop: repeat; timeScale: 1">
@@ -523,17 +525,12 @@
         </a-entity>
 
         <!-- RIGHT knight wrapper -->
-        <a-entity position=" 1 0.15 0.6" rotation="-90 0 0">
+        <a-entity position=" 1 0.25 0.6" rotation="-90 0 0">
           <a-entity gltf-model="#lanternKnightModel" rotation="90 45 45" scale="0.3 0.3 0.3"
             animation-mixer="clip: Take 001; loop: repeat; timeScale: 1">
           </a-entity>
         </a-entity>
 
-        <!-- <a-entity position="0 1.5 0" animation="property: rotation;
-          to: 0 360 0;
-          dur: 12000;
-          loop: true;
-          easing: linear"> -->
         <a-entity id="witchWrapper" dblclick-rotate-visibility visible="false" position="0 1.5 0">
           <!-- offset out on Z so she orbits around the house -->
           <a-entity gltf-model="#witchapprenticeModel" scale="0.01 0.01 0.01" position="0 -0.5 1"
