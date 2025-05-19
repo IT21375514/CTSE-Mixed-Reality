@@ -341,65 +341,66 @@
       });
     });
 
-    AFRAME.registerComponent("chucky-behavior", {
-      schema: {
-        speed: { type: "number", default: 0.005 },    // walking speed per tick
-        attackDistance: { type: "number", default: 0.3 } // when to switch to attack
-      },
-      init() {
-        this.marker = document.querySelector("#babyMarker");
-        this.babyEl = document.querySelector("#baby");
-        this.modelEl = this.el;
-        this.walking = false;
+   AFRAME.registerComponent("chucky-behavior", {
+  schema: {
+    speed: { type: "number", default: 0.005 },
+    attackDistance: { type: "number", default: 0.3 }
+  },
+  init() {
+    this.marker   = document.querySelector("#babyMarker");
+    this.babyEl   = document.querySelector("#baby");
+    this.chuckyEl = this.el;
+    this.walking  = false;
 
-        this.onMarkerFound = this.onMarkerFound.bind(this);
-        this.marker.addEventListener("markerFound", this.onMarkerFound);
-      },
-      onMarkerFound() {
-        // reset to start 1 unit left of baby
-        const babyPos = this.babyEl.object3D.position;
-        this.modelEl.object3D.position.set(babyPos.x - 4, babyPos.y, babyPos.z);
-
-        // start walk animation + sound
-        this.modelEl.setAttribute("animation-mixer", {
-          clip: "Armature|Chucky_WALK_FORWARD",
-          loop: "repeat",
-          timeScale: 1
-        });
-        this.modelEl.emit("startWalk");
-
-        this.walking = true;
-      },
-      tick() {
-        if (!this.walking) return;
-        const babyPos = this.babyEl.object3D.position;
-        const pos = this.modelEl.object3D.position;
-        // compute direction vector toward baby (horizontal only)
-        const dx = babyPos.x - pos.x;
-        const dz = babyPos.z - pos.z;
-        const dist = Math.hypot(dx, dz);
-        if (dist < this.data.attackDistance) {
-          // close enough: switch to attack
-          this.modelEl.setAttribute("animation-mixer", {
-            clip: "Armature|Chucky_ATTACK-KNIFE-02",
-            loop: "repeat",
-            timeScale: 1
-          });
-          this.walking = false;
-          return;
-        }
-        // move a little toward baby each frame
-        pos.x += (dx / dist) * this.data.speed;
-        pos.z += (dz / dist) * this.data.speed;
-        // optionally rotate Chucky to face the baby
-        const angle = Math.atan2(dx, dz) * (180 / Math.PI);
-        this.modelEl.object3D.rotation.y = THREE.MathUtils.degToRad(angle);
-      },
-      remove() {
-        this.marker.removeEventListener("markerFound", this.onMarkerFound);
-      }
+    this.onMarkerFound = this.onMarkerFound.bind(this);
+    this.marker.addEventListener("markerFound", this.onMarkerFound);
+  },
+  onMarkerFound() {
+    const bp = this.babyEl.object3D.position;
+    this.chuckyEl.object3D.position.set(bp.x - 3, bp.y, bp.z);
+    this.chuckyEl.setAttribute("animation-mixer", {
+      clip: "Armature|Chucky_WALK_FORWARD",
+      loop: "repeat",
+      timeScale: 1
     });
+    this.chuckyEl.emit("startWalk");
+    this.walking = true;
+  },
+  tick() {
+    if (!this.walking) return;
+    const bp  = this.babyEl.object3D.position;
+    const cp  = this.chuckyEl.object3D.position;
+    const dx  = bp.x - cp.x;
+    const dz  = bp.z - cp.z;
+    const dist = Math.hypot(dx, dz);
 
+    if (dist < this.data.attackDistance) {
+      // 1) Chucky attacks
+      this.chuckyEl.setAttribute("animation-mixer", {
+        clip: "Armature|Chucky_ATTACK-KNIFE-02",
+        loop: "repeat",
+        timeScale: 1
+      });
+
+      // 2) Baby screams
+      const babySoundComp = this.babyEl.components.sound;
+      if (babySoundComp) babySoundComp.playSound();
+
+      this.walking = false;
+      return;
+    }
+
+    // move toward baby
+    cp.x += (dx / dist) * this.data.speed;
+    cp.z += (dz / dist) * this.data.speed;
+    // rotate to face baby
+    const angle = Math.atan2(dx, dz) * (180 / Math.PI);
+    this.chuckyEl.object3D.rotation.y = THREE.MathUtils.degToRad(angle);
+  },
+  remove() {
+    this.marker.removeEventListener("markerFound", this.onMarkerFound);
+  }
+});
 
   AFRAME.registerComponent('dblclick-rotate-visibility', {
     init: function () {
@@ -482,6 +483,7 @@
       <a-asset-item id="witchapprenticeModel" src="models/witchapprentice.glb"></a-asset-item>
       <a-asset-item id="babyModel" src="models/gregory.glb"></a-asset-item>
       <a-asset-item id="chuckyModel" src="models/chucky.glb"></a-asset-item>
+      <a-asset-item id="leafy_floor" src="models/leafy_floor.glb"></a-asset-item>
 
       <audio id="witchSound" src="sounds/witch-laughing.mp3" preload="auto"></audio>
       <audio id="monsterRoar" src="sounds/monster-roar.mp3" preload="auto"></audio>
@@ -491,7 +493,7 @@
       <audio id="pumpkinBangingSound" src="sounds/halloween_pumpkin_banging.mp3" preload="auto"></audio>
       <audio id="batSound" src="sounds/halloween_bat.mp3" preload="auto"></audio>
       <audio id="chuckySound" src="sounds/chuckySound.mp3" preload="auto"></audio>
-      <audio id="babySound" src="sounds/remusic-scary-loud-screaming-279745.mp3" preload="auto"></audio>
+      <audio id="babySound" src="sounds/baby-scream.mp3" preload="auto"></audio>
     </a-assets>
 
     <!-- Global lights -->
@@ -584,19 +586,36 @@
     </a-marker>
 
  
-    <a-marker id="babyMarker" type="pattern" url="markers/chair.patt" emitevents smooth="true" smoothCount="10"
-      smoothTolerance="0.01">
-      <!-- Baby sits at origin -->
-      <a-entity id="baby" gltf-model="#babyModel" drag-rotate-3d zoomable scale="2 2 2" rotation="-90 0 0"
-        position="0 0 0.1">
-        <a-sound id="babyScream" src="#babySound" on="markerFound" positional="false"></a-sound>
-      </a-entity>
+<a-marker id="babyMarker" type="pattern" url="markers/chair.patt"
+          emitevents smooth="true" smoothCount="10" smoothTolerance="0.01">
 
-      <!-- Chucky follows the baby then attacks -->
-      <a-entity id="chucky" chucky-behavior="speed: 0.08; attackDistance: 0.3" drag-rotate-3d zoomable
-        gltf-model="#chuckyModel" scale="0.007 0.007 0.007" rotation="0 0 -90" animation="startEvents: startWalk"
+  <!-- 1) Leafy floor as the ground -->
+  <a-entity
+    gltf-model="#leafy_floor"
+    scale="4 1 4"
+    rotation="-90 0 0"      <!-- lay it flat -->
+    position="0 0 0"         <!-- marker’s origin -->
+  ></a-entity>
+
+  <!-- 2) Baby sits a bit above the floor -->
+  <a-entity
+    id="baby"
+    gltf-model="#babyModel"
+    drag-rotate-3d zoomable
+    scale="2 2 2"
+    rotation="-90 0 0"
+    position="0 0 0.1"       
+  >
+     <a-sound id="babyScream" src="#babySound" positional="false"></a-sound>
+  </a-entity>
+
+  <!-- 3) Chucky follows the baby then attacks -->
+ <a-entity id="chucky" chucky-behavior="speed: 0.08; attackDistance: 0.3" drag-rotate-3d zoomable
+        gltf-model="#chuckyModel" scale="0.004 0.004 0.004" rotation="0 0 -90" animation="startEvents: startWalk"
         sound="src: #chuckySound; on: startWalk; positional: false"></a-entity>
-    </a-marker>
+        
+</a-marker>
+
 
     <!-- Camera + cursor (now listening for both laptop & pumpkin clicks) -->
     <a-entity camera look-controls="enabled: false">
