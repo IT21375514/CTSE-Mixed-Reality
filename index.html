@@ -400,36 +400,46 @@
       }
     });
 
-AFRAME.registerComponent('dblclick-rotate-visibility', {
+
+  AFRAME.registerComponent('dblclick-rotate-visibility', {
     init: function () {
+      // grab the witch audio
+      this.audio = document.querySelector('#witchSound');
+
       // start hidden
       this.el.setAttribute('visible', false);
 
       // bind for cleanup
       this._onDblClick = this._onDblClick.bind(this);
 
-      // wait until the scene & canvas are ready
       this.el.sceneEl.addEventListener('loaded', () => {
         const canvas = this.el.sceneEl.canvas;
-        if (!canvas) {
-          console.warn('[dblclick-rotate-visibility] no canvas found');
-          return;
-        }
-        // listen for a double-click anywhere on the AR canvas
+        if (!canvas) { console.warn('No AR canvas found'); return; }
         canvas.addEventListener('dblclick', this._onDblClick);
       });
     },
 
     _onDblClick: function (evt) {
-      // only react to left-button
+      // only left‐button
       if (evt.button !== 0) { return; }
+
+      // 1) Find our book marker
+      const marker = this.el.closest('a-marker[id="bookMarker"]');
+      // 2) If it's not currently being tracked, do nothing
+      if (!marker || !marker.object3D.visible) { return; }
+
+      // 3) Toggle visibility + rotation + audio
       const isVisible = this.el.getAttribute('visible');
       if (isVisible) {
-        // hide & stop spinning
+        // hide + stop spin + pause/reset audio
         this.el.setAttribute('visible', false);
         this.el.removeAttribute('animation__rotate');
+        if (this.audio) {
+          this.audio.pause();
+          this.audio.currentTime = 0;
+        }
       } else {
-        // show & start spinning
+        // show + spin + play from start
         this.el.setAttribute('visible', true);
         this.el.setAttribute('animation__rotate', {
           property: 'rotation',
@@ -438,16 +448,20 @@ AFRAME.registerComponent('dblclick-rotate-visibility', {
           loop:     true,
           easing:   'linear'
         });
+        if (this.audio) {
+          this.audio.currentTime = 0;
+          this.audio.play();
+        }
       }
     },
 
     remove: function () {
-      // cleanup listener
       const canvas = this.el.sceneEl && this.el.sceneEl.canvas;
-      if (canvas) { canvas.removeEventListener('dblclick', this._onDblClick); }
+      if (canvas) {
+        canvas.removeEventListener('dblclick', this._onDblClick);
+      }
     }
   });
-
   </script>
 </head>
 
@@ -463,7 +477,6 @@ AFRAME.registerComponent('dblclick-rotate-visibility', {
       <a-asset-item id="dollModel" src="models/spider_doll.glb"></a-asset-item>
       <a-asset-item id="laptopModel" src="models/laptop.glb"></a-asset-item>
       <a-asset-item id="lanternKnightModel" src="models/pumpkin_lantern_knight.glb"></a-asset-item>
-      <!-- <a-asset-item id="groundModel" src="models/ground.glb"></a-asset-item> -->
       <a-asset-item id="pumpkinGroundModel" src="models/evergreen_tree_pine.glb"></a-asset-item>
       <a-asset-item id="halloweenCar" src="models/old_rusty_car.glb"></a-asset-item>
       <a-asset-item id="witchapprenticeModel" src="models/witchapprentice.glb"></a-asset-item>
@@ -471,6 +484,7 @@ AFRAME.registerComponent('dblclick-rotate-visibility', {
       <a-asset-item id="chuckyModel" src="models/chucky.glb"></a-asset-item>
 
       <audio id="witchSound" src="sounds/witch-laughing.mp3" preload="auto"></audio>
+      <audio id="monsterRoar" src="sounds/monster-roar.mp3" preload="auto"></audio>
       <audio id="halloweenHorrorSound" src="sounds/halloween_horror_bgm.mp3" preload="auto"></audio>
       <audio id="typingSound" src="sounds/typing.mp3" preload="auto"></audio>
       <audio id="dollSound" src="sounds/halloween_doll.mp3" preload="auto"></audio>
@@ -488,7 +502,7 @@ AFRAME.registerComponent('dblclick-rotate-visibility', {
 
     <!-- BOOK marker: page-turn on markerFound -->
     <a-marker id="bookMarker" type="pattern" url="markers/ghost.patt" emitevents smooth="true" smoothCount="10"
-      smoothTolerance="0.01" sound="src: #witchSound; on: markerFound; positional: false">
+      smoothTolerance="0.01" sound="src: #monsterRoar; on: markerFound; positional: false">
       <!-- point‐light -->
       <a-entity light="type: point; color: #fff; intensity: 1.2; distance: 10; decay: 2" position="0 2 1">
       </a-entity>
