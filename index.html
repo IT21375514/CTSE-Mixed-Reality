@@ -452,8 +452,8 @@
             return;
           }
 
-          // 1) Find our book marker
-          const marker = this.el.closest('a-marker[id="bookMarker"]');
+          // 1) Find our ghost marker
+          const marker = this.el.closest('a-marker[id="ghostMarker"]');
           // 2) If it's not currently being tracked, do nothing
           if (!marker || !marker.object3D.visible) {
             return;
@@ -603,7 +603,7 @@
 
       <!-- Witch marker -->
       <a-marker
-        id="bookMarker"
+        id="ghostMarker"
         type="pattern"
         url="markers/ghost.patt"
         emitevents
